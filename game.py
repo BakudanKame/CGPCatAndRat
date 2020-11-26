@@ -6,6 +6,12 @@ from enum import Enum
 
 import os.path
 import os
+import js2py
+
+js2py.translate_file('proNav.js', 'proNav.py')
+
+from proNav import proNav
+
 
 import cgp
 from sprites import *
@@ -64,10 +70,10 @@ class Game:
             s.kill()
         # instantiate rats
         for i in range(self.n_rats):
-            x = random.randint(20, 200)
-            y = i * 50
+            x = random.randint(1, 800)
+            y = random.randint(1, 600)
             AIRat(self, self._rat_image, x, y, self.pop[i], i)
-            AICat(self, self._cat_image, x+200, y, i)
+            AICat(self, self._cat_image, random.randint(1,800), random.randint(1,600), i)
         # instantiate the pipes
         # the first pipe with xas the baseline
         # create the background
@@ -198,8 +204,6 @@ class Game:
             angle = math.atan2(y, x) + math.pi
 
 
-            x = nearestCat.rect.x
-
             xEval = rat.eval(x, y, angle)
             if rat.number ==1:
                 print(rat.eval(x, y, angle))
@@ -221,117 +225,30 @@ class Game:
         for rat in self.rats:
             if rat.number == cat.number:
                 nearestRat = rat
-        try:
-            x = cat.rect.x - nearestRat.rect.x
-            y = cat.rect.y - nearestRat.rect.y
-
-            if x > 0.5 * SCREEN_WIDTH:
-                x = x - SCREEN_WIDTH
-            elif x < -0.5 * SCREEN_WIDTH:
-                x = x + SCREEN_WIDTH
-
-            if y > 0.5 * SCREEN_HEIGHT:
-                y = y - SCREEN_HEIGHT
-            elif y < -0.5 * SCREEN_HEIGHT:
-                y = y + SCREEN_HEIGHT
-
-
-            angleToTarget = math.atan2(y, x)
-            cat.stopX()
-            cat.stopY()
-
-
-            #Pro Nav Code 
-            
-            Lx = SCREEN_WIDTH
-            Ly = SCREEN_HEIGHT
-            N = 0.5
-
-            nsep = (math.pow(x,2)+math.pow(y,2))/Lx/Ly
-           
-            
-
-            if  cat.score == 0:
-                print("working 2")
-                losAngleOld = angleToTarget
-                losAngleNew =  losAngleOld
-                losLengthOld = nsep
-                losLengthNew = losLengthOld
-                print("working 3")
-            else:
-                losAngleOld = losAngleNew
-                losAngleNew = angleToTarget
-                losLengthOld = losLengthNew
-                losLengthNew = nsep
                 
-
-            lineOfSight_rate = losAngleNew - losAngleOld
-
-            closingVelocity =  losLengthOld - losLengthNew
-
-            n_T = math.sqrt(nearestRat.strat_force_x ** 2 + nearestRat.strat_force_y ** 2) * math.cos(losAngleNew + (0.5 * math.pi) - math.atan2(nearestRat.strat_force_y, nearestRat.strat_force_x))
-
-            print("working 4")
-            
-            if math.atan2(nearestRat.strat_force_y, nearestRat.strat_force_x) > losAngleNew:
-                lateralAccelerationX = (N * lineOfSight_rate * closingVelocity + (N * n_T * 0.5)) * math.cos(losAngleNew + math.pi*0.5)
-                lateralAccelerationY = (N * lineOfSight_rate * closingVelocity + (N * n_T * 0.5)) * math.sin(losAngleNew + math.pi*0.5)
+        try:
+            if cat.score == 0:
+                thrustVectors = proNav.catStrat4(cat.rect.x, cat.rect.y, nearestRat.rect.x, nearestRat.rect.y, SCREEN_WIDTH, SCREEN_HEIGHT, nearestRat.strat_force_x, nearestRat.strat_force_y, 800, 10, 0, 1)
+                global oldLOSAng
+                oldLOSAng = thrustVectors[2]
+                global oldLOSLen
+                oldLOSLen = thrustVectors[3]
+                
+                cat.strat_force_x = thrustVectors[0]
+                cat.strat_force_y = thrustVectors[1]
+                
             else:
-                lateralAccelerationX = (N * lineOfSight_rate * closingVelocity + (N * n_T * 0.5)) * math.cos(losAngleNew - math.pi*0.5)
-                lateralAccelerationY = (N * lineOfSight_rate * closingVelocity + (N * n_T * 0.5)) * math.sin(losAngleNew - math.pi*0.5)
+                thrustVectors = proNav.catStrat4(cat.rect.x, cat.rect.y, nearestRat.rect.x, nearestRat.rect.y, SCREEN_WIDTH, SCREEN_HEIGHT, nearestRat.strat_force_x, nearestRat.strat_force_y, 800, oldLOSAng, oldLOSLen, 2)
+                oldLOSAng = thrustVectors[2]
+                oldLOSLen = thrustVectors[3]
+                
+                cat.strat_force_x = thrustVectors[0]
+                cat.strat_force_y = thrustVectors[1]
 
-            print("working 5")
-
-            if (N * lineOfSight_rate * closingVelocity + (N * n_T * 0.5)) < 1100:
-                losAccelerationX = (1100 - (N * lineOfSight_rate * closingVelocity + (N * n_T * 0.5))) * math.cos(losAngleNew + math.pi)
-                losAccelerationY = (1100 - (N * lineOfSight_rate * closingVelocity + (N * n_T * 0.5))) * math.sin(losAngleNew + math.pi)
-            else:
-                losAccelerationX = 0
-                losAccelerationY = 0
-
-            print("working 6")
-
-            cat.strat_force_x = lateralAccelerationX + losAccelerationX
-
-            cat.strat_force_y = lateralAccelerationY + losAccelerationY
+        
             
-            print("working 7")
             
-            '''
             
-            #CLOS CODE
-
-            cat.strat_force_x = 800 * math.cos(angleToTarget)
-
-            cat.strat_force_y = 800 * math.sin(angleToTarget)
-            '''
-      
-
-            '''
-            #Digitized CLOS Code
-            if angleToTarget > math.pi * (1/8) and angleToTarget < math.pi * (3/8):
-                cat.goUp()
-                cat.goRight()
-            elif angleToTarget > math.pi * (3/8) and angleToTarget < math.pi * (5/8):
-                cat.goUp()
-            elif angleToTarget > math.pi * (5/8) and angleToTarget < math.pi * (7/8):
-                cat.goUp()
-                cat.goLeft()
-            elif angleToTarget < math.pi * (-1/8) and angleToTarget > math.pi * (-3/8):
-                cat.goDown()
-                cat.goRight()
-            elif angleToTarget < math.pi * (-3/8) and angleToTarget > math.pi * (-5/8):
-                cat.goDown()
-            elif angleToTarget < math.pi * (-5/8) and angleToTarget > math.pi * (-7/8):
-                cat.goDown()
-                cat.goLeft()
-            elif angleToTarget < math.pi * (1/8) and angleToTarget > math.pi * (-1/8):
-                cat.goRight()
-            else:
-                cat.goLeft()
-
-             '''
-
         except:
             cat.strat_force_x = 0
             cat.strat_force_y = 0
@@ -363,8 +280,6 @@ class Game:
         # count the score: one point per frame
         for rat in self.rats:
             rat.score += 1  # when a rat dies, its score will be set to the CGP individual's fitness automatically
-            if rat.score > self._max_score_so_far:
-                rat.save()
 
         self._max_score += 1
         self._max_score_so_far = max(self._max_score_so_far, self._max_score)

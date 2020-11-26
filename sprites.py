@@ -4,11 +4,16 @@ Sprites used in the game: the rat and the pipe.
 import enum
 import numpy as np
 import math
+import js2py
 
 import pygame as pg
 
 from settings import *
 from os import path
+
+js2py.translate_file('CGP.js', 'js.py')
+
+from js import js
 
 
 class MovableSprite(pg.sprite.Sprite):
@@ -42,7 +47,7 @@ class Rat(MovableSprite):
         self.strat_force_x = 0
         self.strat_force_y = 0
         self.m = 1
-        self.damping = -5
+        self.damping = 5
         self.flag = True
 
 
@@ -54,12 +59,18 @@ class Rat(MovableSprite):
             return
          
             
-        self.rk4_step()
+        posVelArray = js.rk4(self.rect.x, self.rect.y, self.strat_force_x, self.strat_force_y, self.damping, self._vel_x, self._vel_y)
+        
+        self.rect.x = posVelArray[0]
+        self.rect.y = posVelArray[1]
+        self._vel_x = posVelArray[2]
+        self._vel_y = posVelArray[3]
+        
         self.rect = self.image.get_rect(center=self.rect.center)
         
         if self.rect.right > SCREEN_WIDTH:
         	self.rect.x = self.rect.x - SCREEN_WIDTH
-        if self.rect.x < 0:
+        if self.rect.left < 0:
         	self.rect.x = SCREEN_WIDTH + self.rect.x
         if self.rect.top > SCREEN_HEIGHT:
         	self.rect.y = self.rect.y - SCREEN_HEIGHT
@@ -71,67 +82,6 @@ class Rat(MovableSprite):
                 self.flag = False
                 self.kill()
                 return
-
-
-    def goRight(self):
-        self.strat_force_x = 1100
-    
-    def goLeft(self):
-	    self.strat_force_x = -1100
-	    
-    def goUp(self):
-	    self.strat_force_y = 1100
-		
-    def goDown(self):
-	    self.strat_force_y = -1100
-	 
-    def stopX(self):
-        self.strat_force_x = 0
-	
-    def stopY(self):
-        self.strat_force_y = 0
-
-	    
-    def vel_func(self, positions, velocities, time):
-        velocities = np.array([self._vel_x, self._vel_y])
-        return velocities
-
-    def accel_func(self, positions, velocities, time):
-        # potential_forces = self.environment.get_env_forces(positions)
-        if self.strat_force_x != 0 and self.strat_force_y != 0:
-            theta = math.atan2(self.strat_force_y, self.strat_force_x)
-            self.strat_force_x = 1100 * math.cos(theta)
-            self.strat_force_y = 1100 * math.sin(theta)
-            print("HERE!")
-
-        
-        strategy_forces = np.array([self.strat_force_x, self.strat_force_y])
-        damping_forces = self.damping * self.vel_func(positions, velocities, time)
-        total_forces = strategy_forces + damping_forces
-        magnitude = math.sqrt(total_forces[0]**2 + total_forces[1]**2)
-        accelerations = total_forces / self.m
-        return accelerations
-
-    def rk4_step(self):
-        current_positions = np.array([self.rect.x, self.rect.y])
-        current_velocities = np.array([self._vel_x, self._vel_y])
-        # numerics to calculate coefficients:
-        pos_k1 = self.dt * self.vel_func(current_positions, current_velocities, self.t)
-        vel_k1 = self.dt * self.accel_func(current_positions, current_velocities, self.t)
-        pos_k2 = self.dt * self.vel_func(current_positions + (pos_k1 / 2), current_velocities + (vel_k1 / 2 ), self.t + (self.dt / 2))
-        vel_k2 = self.dt * self.accel_func(current_positions + (pos_k1 / 2), current_velocities + (vel_k1 / 2), self.t + (self.dt / 2))
-        pos_k3 = self.dt * self.vel_func(current_positions + (pos_k2 / 2), current_velocities + (vel_k2 / 2), self.t + (self.dt / 2))
-        vel_k3 = self.dt * self.accel_func(current_positions + (pos_k2 / 2), current_velocities + (vel_k2 / 2), self.t + (self.dt / 2))
-        pos_k4 = self.dt * self.vel_func(current_positions + pos_k3, current_velocities + vel_k3, self.t + self.dt)
-        vel_k4 = self.dt * self.accel_func(current_positions + pos_k3, current_velocities + vel_k3, self.t + self.dt)
-        # update according to rk4 formula:
-        new_positions = current_positions + ((1/6) * (pos_k1 + 2*pos_k2 + 2*pos_k3 + pos_k4))
-        new_velocites = current_velocities + ((1/6) * (vel_k1 + 2*vel_k2 + 2*vel_k3 + vel_k4))
-        # load new values into instance attributes:
-        self.rect.x, self.rect.y = new_positions[0], new_positions[1]
-        self._vel_x = new_velocites[0]
-        self._vel_y = new_velocites[1]
-        self.t += self.dt
 
     
     @property
@@ -170,12 +120,18 @@ class Cat(MovableSprite):
             self.kill()
             return
             
-        self.rk4_step()
+        posVelArray = js.rk4(self.rect.x, self.rect.y, self.strat_force_x, self.strat_force_y, self.damping, self._vel_x, self._vel_y)
+        
+        self.rect.x = posVelArray[0]
+        self.rect.y = posVelArray[1]
+        self._vel_x = posVelArray[2]
+        self._vel_y = posVelArray[3]
+        
         self.rect = self.image.get_rect(center=self.rect.center)
         
         if self.rect.right > SCREEN_WIDTH:
         	self.rect.x = self.rect.x - SCREEN_WIDTH
-        if self.rect.x < 0:
+        if self.rect.left < 0:
         	self.rect.x = SCREEN_WIDTH + self.rect.x
         if self.rect.top > SCREEN_HEIGHT:
         	self.rect.y = self.rect.y - SCREEN_HEIGHT
@@ -186,67 +142,7 @@ class Cat(MovableSprite):
             if self.number == pg.sprite.spritecollideany(self, self._game.cats).number:
                 self.flag = False
                 return
-
-
-    def goRight(self):
-        self.strat_force_x = 800
     
-    def goLeft(self):
-	    self.strat_force_x = -800
-	    
-    def goUp(self):
-	    self.strat_force_y = -800
-		
-    def goDown(self):
-	    self.strat_force_y = 800
-	    
-    def stopX(self):
-        self.strat_force_x = 0
-	
-    def stopY(self):
-        self.strat_force_y = 0
-		
-	    
-    def vel_func(self, positions, velocities, time):
-        velocities = np.array([self._vel_x, self._vel_y])
-        return velocities
-
-    def accel_func(self, positions, velocities, time):
-        # potential_forces = self.environment.get_env_forces(positions)
-        if self.strat_force_x != 0 and self.strat_force_y != 0:
-            theta = math.atan2(self.strat_force_y, self.strat_force_x)
-            self.strat_force_x = 1100 * math.cos(theta)
-            self.strat_force_y = 1100 * math.sin(theta)
-            
-        strategy_forces = np.array([self.strat_force_x, self.strat_force_y])
-        damping_forces = self.damping * self.vel_func(positions, velocities, time)
-        total_forces = strategy_forces + damping_forces
-        magnitude = math.sqrt(total_forces[0]**2 + total_forces[1]**2)
-        accelerations = total_forces / self.m
-        return accelerations
-
-    def rk4_step(self):
-        current_positions = np.array([self.rect.x, self.rect.y])
-        current_velocities = np.array([self._vel_x, self._vel_y])
-        # numerics to calculate coefficients:
-        pos_k1 = self.dt * self.vel_func(current_positions, current_velocities, self.t)
-        vel_k1 = self.dt * self.accel_func(current_positions, current_velocities, self.t)
-        pos_k2 = self.dt * self.vel_func(current_positions + (pos_k1 / 2), current_velocities + (vel_k1 / 2 ), self.t + (self.dt / 2))
-        vel_k2 = self.dt * self.accel_func(current_positions + (pos_k1 / 2), current_velocities + (vel_k1 / 2), self.t + (self.dt / 2))
-        pos_k3 = self.dt * self.vel_func(current_positions + (pos_k2 / 2), current_velocities + (vel_k2 / 2), self.t + (self.dt / 2))
-        vel_k3 = self.dt * self.accel_func(current_positions + (pos_k2 / 2), current_velocities + (vel_k2 / 2), self.t + (self.dt / 2))
-        pos_k4 = self.dt * self.vel_func(current_positions + pos_k3, current_velocities + vel_k3, self.t + self.dt)
-        vel_k4 = self.dt * self.accel_func(current_positions + pos_k3, current_velocities + vel_k3, self.t + self.dt)
-        # update according to rk4 formula:
-        new_positions = current_positions + ((1/6) * (pos_k1 + 2*pos_k2 + 2*pos_k3 + pos_k4))
-        new_velocites = current_velocities + ((1/6) * (vel_k1 + 2*vel_k2 + 2*vel_k3 + vel_k4))
-        # load new values into instance attributes:
-        self.rect.x, self.rect.y = new_positions[0], new_positions[1]
-        self._vel_x, self._vel_y = new_velocites[0], new_velocites[1]
-        self.t += self.dt
-
-    
-
     @property
     def vel_x(self):
         return self._vel_x

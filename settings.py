@@ -5,17 +5,14 @@ Define some constant parameters and program settings.
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 TITLE = 'Cat And Rat AI via Evolutionary Cartesian Genetic Programming'
-FPS = 30
+FPS = 60
 IMG_DIR = './img'
 SND_DIR = './snd'
 FONT_NAME = 'Arial'
 FONT_SIZE = 20
 WHITE = (255, 255, 255)
 
-JUMP_SPEED = -3.5     # once the bird flaps, its speed becomes this value
-GRAVITY_ACC = 0.35
-BIRD_X_SPEED = 3   # the const horizontal speed of the bird
-BIRD_MAX_Y_SPEED = 5    # the maximum downward speed
+# the maximum downward speed
 
 # horizontal space between two adjacent pairs of pipes
 
@@ -32,3 +29,10 @@ N_GEN = 200  # max number of generations
 
 # if True, then additional information will be printed
 VERBOSE = True
+
+PP_FORMULA = True
+PP_FORMULA_NUM_DIGITS = 5
+PP_FORMULA_SIMPLIFICATION = True
+PP_GRAPH_VISUALIZATION = True
+
+RANDOM_SEED = None
